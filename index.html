@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunar OS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            position: relative;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(100, 200, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -100px;
+            left: -100px;
+            animation: float 15s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(150, 100, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -50px;
+            right: -50px;
+            animation: float 20s ease-in-out infinite reverse;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(50px, 50px); }
+        }
+
+        .desktop {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .dock {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            padding: 12px 20px;
+            border-radius: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .dock-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .dock-icon:hover {
+            transform: scale(1.1) translateY(-5px);
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .window {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            min-width: 350px;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .window.hidden {
+            display: none;
+        }
+
+        .window-header {
+            background: linear-gradient(135deg, rgba(100, 200, 255, 0.3), rgba(150, 100, 255, 0.3));
+            padding: 12px 16px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .window-header h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .close-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ff5f56;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #ff4d45;
+        }
+
+        .window-content {
+            padding: 20px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+        }
+
+        /* Notes App */
+        .note-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            font-family: inherit;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .note-input::placeholder {
+            color: #aaa;
+        }
+
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .note {
+            padding: 12px;
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            border-radius: 8px;
+            position: relative;
+            word-break: break-word;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .note .delete-note {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 20px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .note:hover .delete-note {
+            opacity: 1;
+        }
+
+        /* Music Player */
+        .player-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .album-art {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        .song-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .song-artist {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 30%;
+        }
+
+        .time-display {
+            font-size: 11px;
+            color: #999;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* Settings */
+        .setting-item {
+            padding: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .setting-value {
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        /* Scrollbar */
+        .window-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .window-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .window-content::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+
+        .window-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .time-widget {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 32px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 50;
+        }
+
+        .time-widget .date {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 4px;
+        }
+
+        .time-widget .name {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="desktop">
+        <!-- Time Widget -->
+        <div class="time-widget">
+            <div class="clock">00:00</div>
+            <div class="date">Today</div>
+            <div class="name" id="displayName"></div>
+        </div>
+
+        <!-- Dock -->
+        <div class="dock">
+            <div class="dock-icon" onclick="toggleWindow('notes')">📝</div>
+            <div class="dock-icon" onclick="toggleWindow('music')">🎵</div>
+            <div class="dock-icon" onclick="toggleWindow('settings')">⚙️</div>
+        </div>
+
+        <!-- Notes Window -->
+        <div class="window hidden" id="notes">
+            <div class="window-header">
+                <h2>Notes</h2>
+                <div class="close-btn" onclick="toggleWindow('notes')">×</div>
+            </div>
+            <div class="window-content">
+                <input type="text" class="note-input" id="noteInput" placeholder="Add a new note...">
+                <button style="width: 100%; padding: 10px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 15px; font-weight: 600; transition: all 0.2s;" onclick="addNote()" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">Add Note</button>
+                <div class="notes-list" id="notesList"></div>
+            </div>
+        </div>
+
+        <!-- Music Window -->
+        <div class="window hidden" id="music" style="width: 350px;">
+            <div class="window-header">
+                <h2>Music Player</h2>
+                <div class="close-btn" onclick="toggleWindow('music')">×</div>
+            </div>
+            <div class="window-content">
+                <div class="player-display">
+                    <div class="album-art">🎧</div>
+                    <div class="song-title" id="songTitle">Serenity</div>
+                    <div class="song-artist" id="songArtist">Chill Vibes</div>
+                </div>
+                <div class="player-controls">
+                    <button class="control-btn" onclick="previousSong()">⏮</button>
+                    <button class="control-btn" id="playBtn" onclick="togglePlay()" style="width: 50px; height: 50px; font-size: 20px;">▶</button>
+                    <button class="control-btn" onclick="nextSong()">⏭</button>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <div class="time-display"><span id="currentTime">0:00</span> / <span id="duration">3:45</span></div>
+            </div>
+        </div>
+
+        <!-- Settings Window -->
+        <div class="window hidden" id="settings" style="width: 320px;">
+            <div class="window-header">
+                <h2>Settings</h2>
+                <div class="close-btn" onclick="toggleWindow('settings')">×</div>
+            </div>
+            <div class="window-content">
+                <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <span class="setting-label">Your Name</span>
+                    <input type="text" id="userNameInput" placeholder="Enter your name..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">System Name</span>
+                    <span class="setting-value">Lunar OS</span>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Version</span>
+                    <span class="setting-value">1.0</span>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Theme</span>
+                    <span class="setting-value">Dark</span>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Memory</span>
+                    <span class="setting-value">512 MB</span>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Display</span>
+                    <span class="setting-value">1920×1080</span>
+                </div>
+                <div style="margin-top: 20px; padding: 12px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.2); text-align: center;">
+                    <p style="font-size: 12px; color: #666; margin-bottom: 8px;">✨ Made with simplicity & style</p>
+                    <p style="font-size: 11px; color: #999;">A minimal web OS experience</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE VARIABLES =====
+        let activeWindow = null;
+        let draggedWindow = null;
+        let dragOffset = { x: 0, y: 0 };
+        let notes = [];
+        const songs = [
+            { title: 'Serenity', artist: 'Chill Vibes' },
+            { title: 'Echoes', artist: 'Ambient Dreams' },
+            { title: 'Luminescence', artist: 'Sonic Waves' }
+        ];
+        let currentSong = 0;
+        let isPlaying = false;
+
+        // ===== WINDOW MANAGEMENT =====
+        function toggleWindow(id) {
+            const win = document.getElementById(id);
+            if (win.classList.contains('hidden')) {
+                win.classList.remove('hidden');
+                const left = Math.max(0, (window.innerWidth - win.offsetWidth) / 2);
+                const top = Math.max(0, (window.innerHeight - win.offsetHeight) / 2);
+                win.style.left = left + 'px';
+                win.style.top = top + 'px';
+            } else {
+                win.classList.add('hidden');
+            }
+        }
+
+        // ===== DRAGGABLE WINDOWS =====
+        document.addEventListener('mousedown', (e) => {
+            const header = e.target.closest('.window-header');
+            if (header) {
+                draggedWindow = header.closest('.window');
+                const rect = draggedWindow.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (draggedWindow) {
+                draggedWindow.style.left = (e.clientX - dragOffset.x) + 'px';
+                draggedWindow.style.top = (e.clientY - dragOffset.y) + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            draggedWindow = null;
+        });
+
+        // ===== NOTES APP =====
+        function loadNotes() {
+            try {
+                notes = JSON.parse(localStorage.getItem('notes') || '[]');
+            } catch (e) {
+                notes = [];
+            }
+            renderNotes();
+        }
+
+        function addNote() {
+            const input = document.getElementById('noteInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            notes.push(text);
+            try {
+                localStorage.setItem('notes', JSON.stringify(notes));
+            } catch (e) {
+                console.log('localStorage not available, notes stored in memory only');
+            }
+            input.value = '';
+            renderNotes();
+        }
+
+        function deleteNote(index) {
+            notes.splice(index, 1);
+            try {
+                localStorage.setItem('notes', JSON.stringify(notes));
+            } catch (e) {
+                console.log('localStorage not available');
+            }
+            renderNotes();
+        }
+
+        function renderNotes() {
+            const notesList = document.getElementById('notesList');
+            notesList.innerHTML = '';
+            notes.forEach((note, idx) => {
+                const noteEl = document.createElement('div');
+                noteEl.className = 'note';
+                noteEl.innerHTML = `
+                    ${note}
+                    <div class="delete-note" onclick="deleteNote(${idx})">×</div>
+                `;
+                notesList.appendChild(noteEl);
+            });
+        }
+
+        // ===== MUSIC PLAYER =====
+        let audioContext = null;
+        let oscillator = null;
+        let gainNode = null;
+
+        function initAudio() {
+            if (audioContext) return;
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playTone(frequency, duration) {
+            if (!audioContext) initAudio();
+            const now = audioContext.currentTime;
+            gainNode = audioContext.createGain();
+            oscillator = audioContext.createOscillator();
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+        }
+
+        function updateSongDisplay() {
+            document.getElementById('songTitle').textContent = songs[currentSong].title;
+            document.getElementById('songArtist').textContent = songs[currentSong].artist;
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('playBtn');
+            btn.textContent = isPlaying ? '⏸' : '▶';
+            if (isPlaying) {
+                playMusicMelody();
+                animateProgress();
+            }
+        }
+
+        function playMusicMelody() {
+            if (!isPlaying) return;
+            const notes = [440, 494, 523, 587, 659]; // A, B, C, D, E
+            const noteIndex = Math.floor(Math.random() * notes.length);
+            playTone(notes[noteIndex], 0.2);
+            setTimeout(playMusicMelody, 300);
+        }
+
+        function nextSong() {
+            currentSong = (currentSong + 1) % songs.length;
+            updateSongDisplay();
+            if (isPlaying) {
+                playTone(523, 0.1);
+            }
+        }
+
+        function previousSong() {
+            currentSong = (currentSong - 1 + songs.length) % songs.length;
+            updateSongDisplay();
+            if (isPlaying) {
+                playTone(440, 0.1);
+            }
+        }
+
+        function animateProgress() {
+            if (!isPlaying) return;
+            const progress = document.getElementById('progress');
+            let width = parseFloat(progress.style.width) || 0;
+            width += 0.3;
+            if (width > 100) width = 0;
+            progress.style.width = width + '%';
+            setTimeout(animateProgress, 50);
+        }
+
+        // ===== CLOCK =====
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.querySelector('.time-widget .clock').textContent = `${hours}:${minutes}`;
+            document.querySelector('.time-widget .date').textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+
+        // ===== NAME MANAGEMENT =====
+        function loadName() {
+            try {
+                const savedName = localStorage.getItem('userName') || '';
+                if (savedName) {
+                    document.getElementById('userNameInput').value = savedName;
+                    displayUserName(savedName);
+                }
+            } catch (e) {
+                console.log('localStorage not available');
+            }
+        }
+
+        function displayUserName(name) {
+            const nameDisplay = document.getElementById('displayName');
+            if (name.trim()) {
+                nameDisplay.textContent = '👤 ' + name;
+            } else {
+                nameDisplay.textContent = '';
+            }
+        }
+
+        function saveUserName() {
+            const name = document.getElementById('userNameInput').value;
+            try {
+                localStorage.setItem('userName', name);
+            } catch (e) {
+                console.log('localStorage not available');
+            }
+            displayUserName(name);
+        }
+
+        // ===== INITIALIZATION =====
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNotes();
+            loadName();
+            updateSongDisplay();
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            document.getElementById('noteInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addNote();
+            });
+
+            document.getElementById('userNameInput').addEventListener('change', saveUserName);
+            document.getElementById('userNameInput').addEventListener('input', () => {
+                const name = document.getElementById('userNameInput').value;
+                displayUserName(name);
+            });
+        });
+    </script>
+</body>
+</html>
